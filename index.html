@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="ru">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <title>Hand Chart Editor</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+
+        <style>
+            :root {
+                --surface0: #313244;
+                --surface1: #45475a;
+                --surface2: #585b70;
+                --text: #cdd6f4;
+                --base: #1e1e2e;
+                --mauve: #cba6f7;
+            }
+
+            body {
+                font-family: Inter, system-ui, -apple-system, sans-serif;
+                background: var(--base);
+                color: var(--text);
+                margin: 0;
+                padding: 18px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 20px;
+            }
+
+            .palette, .controls {
+                display: flex;
+                gap: 12px;
+                flex-wrap: wrap;
+                justify-content: center;
+                align-items: center;
+            }
+
+            .color-dot {
+                width: 32px;
+                height: 32px;
+                border-radius: 50%;
+                cursor: pointer;
+                border: 2px solid transparent;
+                box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+                transition: transform 0.1s ease;
+            }
+
+            .color-dot.selected {
+                outline: 3px solid var(--mauve);
+                transform: scale(1.1);
+            }
+
+            .matrix-wrap {
+                width: 100%;
+                display: flex;
+                justify-content: center;
+            }
+
+            .matrix {
+                display: grid;
+                grid-template-columns: repeat(13, 1fr);
+                gap: 4px;
+                background: var(--surface0);
+                padding: 12px;
+                border-radius: 12px;
+                max-width: 800px;
+                width: 100%;
+            }
+
+            .cell {
+                aspect-ratio: 1;
+                background: var(--surface1);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                border-radius: 4px;
+                cursor: pointer;
+                user-select: none;
+                font-size: clamp(9px, 1.5vw, 14px);
+                font-weight: 600;
+                transition: filter 0.1s;
+            }
+
+            .cell:hover {
+                filter: brightness(1.2);
+            }
+
+            .btn {
+                padding: 10px 18px;
+                border-radius: 8px;
+                background: var(--mauve);
+                color: #1e1e2e;
+                font-weight: 700;
+                cursor: pointer;
+                border: none;
+            }
+
+            .btn.secondary {
+                background: var(--surface1);
+                color: var(--text);
+            }
+
+            input[type="file"] {
+                display: none;
+            }
+        </style>
+    </head>
+
+    <body>
+        <div class="palette">
+            <span style="opacity: 0.8">Цвет:</span>
+            <div id="paletteColors" class="flex gap-2"></div>
+            
+            <div
+                class="color-dot flex items-center justify-center text-xs"
+                data-color="erase"
+                title="Ластик"
+                style="background: var(--surface2);"
+            >
+                ✕
+            </div>
+        </div>
+
+        <div class="controls">
+            <button id="clearAll" class="btn secondary">Очистить</button>
+            <button id="saveBtn" class="btn secondary">Сохранить JSON</button>
+            <button id="loadBtn" class="btn secondary">Загрузить JSON</button>
+            <button id="savePng" class="btn">Скачать PNG</button>
+            <input id="fileIn" type="file" accept="application/json" />
+        </div>
+
+        <div class="matrix-wrap">
+            <div id="matrix" class="matrix"></div>
+        </div>
+
+        <script>
+            /* ========= КОНФИГУРАЦИЯ ========= */
+            const PALETTE_COLORS = [
+                "#a6e3a1", "#94e2d5", "#89dceb", "#74c7ec", "#89b4fa",
+                "#b4befe", "#cba6f7", "#f5c2e7", "#eba0ac", "#f38ba8",
+                "#fab387", "#f9e2af"
+            ];
+
+            const ranks = ["A", "K", "Q", "J", "T", "9", "8", "7", "6", "5", "4", "3", "2"];
+            const matrixContainer = document.getElementById("matrix");
+            const paletteContainer = document.getElementById("paletteColors");
+            
+            let currentColor = PALETTE_COLORS[0];
+            let eraseMode = false;
+            let painting = false;
+
+            /* ========= ИНИЦИАЛИЗАЦИЯ ========= */
+
+            // Создание палитры
+            PALETTE_COLORS.forEach((color) => {
+                const d = document.createElement("div");
+                d.className = "color-dot";
+                d.dataset.color = color;
+                d.style.background = color;
+                d.onclick = () => selectColor(d);
+                paletteContainer.appendChild(d);
+            });
+
+            // Кнопка ластика
+            const eraser = document.querySelector('[data-color="erase"]');
+            eraser.onclick = () => selectColor(eraser);
+
+            function selectColor(dot) {
+                document.querySelectorAll(".color-dot").forEach((d) => d.classList.remove("selected"));
+                dot.classList.add("selected");
+                if (dot.dataset.color === "erase") {
+                    eraseMode = true;
+                    currentColor = null;
+                } else {
+                    eraseMode = false;
+                    currentColor = dot.dataset.color;
+                }
+            }
+
+            // По умолчанию выбираем первый цвет
+            selectColor(paletteContainer.firstChild);
+
+            // Построение матрицы
+            function buildMatrix() {
+                matrixContainer.innerHTML = "";
+                ranks.forEach((r1, i) => {
+                    ranks.forEach((r2, j) => {
+                        const hand = i === j ? r1 + r2 : (i < j ? r1 + r2 + "s" : r2 + r1 + "o");
+                        const c = document.createElement("div");
+                        c.className = "cell";
+                        c.dataset.hand = hand;
+                        c.textContent = hand;
+                        matrixContainer.appendChild(c);
+                    });
+                });
+            }
+            buildMatrix();
+
+            /* ========= ЛОГИКА РИСОВАНИЯ ========= */
+
+            function isLight(hex) {
+                if (!hex) return false;
+                const r = parseInt(hex.substr(1, 2), 16);
+                const g = parseInt(hex.substr(3, 2), 16);
+                const b = parseInt(hex.substr(5, 2), 16);
+                return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255 > 0.6;
+            }
+
+            function paintCell(c) {
+                if (!c.classList.contains("cell")) return;
+                if (eraseMode) {
+                    c.style.background = "";
+                    c.style.color = "";
+                    c.removeAttribute("data-color");
+                } else {
+                    c.style.background = currentColor;
+                    c.style.color = isLight(currentColor) ? "#000" : "#fff";
+                    c.dataset.color = currentColor;
+                }
+            }
+
+            matrixContainer.onmousedown = (e) => {
+                if (e.button === 0) { // Левая кнопка - рисовать
+                    painting = true;
+                    paintCell(e.target);
+                } else if (e.button === 2) { // Правая кнопка - временно ластик
+                    painting = true;
+                    const originalErase = eraseMode;
+                    const originalColor = currentColor;
+                    eraseMode = true;
+                    paintCell(e.target);
+                    // Возвращаем настройки после отпускания кнопки в window.onmouseup
+                    window.addEventListener('mouseup', () => {
+                        eraseMode = originalErase;
+                        currentColor = originalColor;
+                    }, { once: true });
+                }
+            };
+
+            matrixContainer.oncontextmenu = (e) => e.preventDefault();
+            matrixContainer.onmousemove = (e) => painting && paintCell(e.target);
+            window.onmouseup = () => painting = false;
+
+/* ========= СОХРАНЕНИЕ И ЗАГРУЗКА ========= */
+
+document.getElementById("saveBtn").onclick = () => {
+    // 1. Спрашиваем имя файла
+    let fileName = prompt("Введите имя файла для сохранения (JSON):", "my-poker-chart");
+    
+    // Если пользователь нажал "Отмена", прерываем функцию
+    if (fileName === null) return;
+    if (!fileName.trim()) fileName = "chart"; // Имя по умолчанию, если ввели пустоту
+
+    const out = {};
+    document.querySelectorAll(".cell").forEach((c) => {
+        if (c.dataset.color) out[c.dataset.hand] = c.dataset.color;
+    });
+
+    const blob = new Blob([JSON.stringify(out, null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `${fileName}.json`; // Используем введенное имя
+    a.click();
+};
+
+/* ========= СОХРАНЕНИЕ PNG ========= */
+
+document.getElementById("savePng").onclick = async () => {
+    // 1. Спрашиваем имя файла
+    let fileName = prompt("Введите имя файла для сохранения (PNG):", "poker-matrix");
+    
+    if (fileName === null) return;
+    if (!fileName.trim()) fileName = "poker-matrix";
+
+    const btn = document.getElementById("savePng");
+    const originalText = btn.textContent;
+    btn.textContent = "Загрузка...";
+
+    try {
+        const canvas = await html2canvas(matrixContainer, {
+            scale: 2,
+            backgroundColor: "#1e1e2e",
+        });
+        const a = document.createElement("a");
+        a.download = `${fileName}.png`; // Используем введенное имя
+        a.href = canvas.toDataURL("image/png");
+        a.click();
+    } catch (err) {
+        console.error("Ошибка при создании PNG:", err);
+    } finally {
+        btn.textContent = originalText;
+    }
+};
+        </script>
+    </body>
+</html>
