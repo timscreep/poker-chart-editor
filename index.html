@@ -39,7 +39,7 @@
                 gap: 20px;
                 background: var(--surface1);
                 padding: 24px;
-                border-radius: 24px; /* Мягкое скругление */
+                border-radius: 24px;
                 box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
                 border: 1px solid rgba(255, 255, 255, 0.05);
             }
@@ -56,7 +56,7 @@
             .color-dot {
                 width: 36px;
                 height: 36px;
-                border-radius: 12px; /* Квадрат со скругленными углами */
+                border-radius: 12px;
                 cursor: pointer;
                 border: 2px solid transparent;
                 transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
@@ -75,15 +75,17 @@
                 padding: 10px 0 30px 0;
                 display: flex;
                 justify-content: center;
+                scrollbar-width: none; /* Прячем нативный скролл */
             }
+            .matrix-scroll-area::-webkit-scrollbar { display: none; }
 
             .matrix {
                 display: grid;
                 grid-template-columns: repeat(13, 1fr);
-                gap: 4px; /* Небольшой зазор между ячейками */
+                gap: 4px;
                 background: var(--surface1);
                 padding: 12px;
-                border-radius: 20px; /* Скругление всей таблицы */
+                border-radius: 20px;
                 width: 780px;
                 min-width: 780px;
                 box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
@@ -99,7 +101,7 @@
                 user-select: none;
                 font-size: 13px;
                 font-weight: 700;
-                border-radius: 8px; /* Скругление каждой ячейки */
+                border-radius: 8px;
                 transition: transform 0.1s ease, filter 0.1s ease;
             }
 
@@ -111,7 +113,7 @@
             /* Кнопки */
             .btn {
                 padding: 12px 24px;
-                border-radius: 14px; /* Современные скругленные кнопки */
+                border-radius: 14px;
                 background: var(--mauve);
                 color: #11111b;
                 font-weight: 700;
@@ -135,17 +137,42 @@
                 box-shadow: none;
             }
             
-            .btn.secondary:hover {
-                background: #585b70;
-            }
-
+            .btn.secondary:hover { background: #585b70; }
             input[type="file"] { display: none; }
+
+            /* Мобильная навигация (Мини-карта) */
+            .minimap {
+                display: none; /* По умолчанию скрыто на ПК */
+                position: fixed;
+                bottom: 20px;
+                right: 20px;
+                width: 140px;
+                height: 36px;
+                background: rgba(49, 50, 68, 0.9);
+                border-radius: 18px;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                z-index: 100;
+                overflow: hidden;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+                touch-action: none;
+            }
+            .minimap-viewport {
+                position: absolute;
+                top: 2px;
+                left: 2px;
+                height: 30px;
+                background: rgba(203, 166, 247, 0.4);
+                border: 2px solid var(--mauve);
+                border-radius: 14px;
+                cursor: grab;
+            }
 
             /* Адаптация под мобилки */
             @media (max-width: 640px) {
                 .cell { height: 46px; font-size: 11px; border-radius: 6px; }
                 .matrix { width: 600px; min-width: 600px; padding: 8px; border-radius: 16px; }
                 .controls-container { padding: 16px; border-radius: 20px; }
+                .minimap { display: block; } /* Показываем только на телефонах */
             }
         </style>
     </head>
@@ -171,6 +198,10 @@
             <div id="matrix" class="matrix"></div>
         </div>
 
+        <div id="minimap" class="minimap">
+            <div id="minimap-viewport" class="minimap-viewport"></div>
+        </div>
+
         <script>
             const PALETTE_COLORS = [
                 "#a6e3a1", "#94e2d5", "#89dceb", "#74c7ec", "#89b4fa",
@@ -184,7 +215,6 @@
             
             let currentColor = PALETTE_COLORS[0];
             let eraseMode = false;
-            let painting = false;
 
             PALETTE_COLORS.forEach(color => {
                 const d = document.createElement("div");
@@ -217,9 +247,12 @@
                 });
             });
 
-            function paint(el) {
+            // Обновленная функция отрисовки (принимает флаг forceErase)
+            function paint(el, forceErase = false) {
                 if (!el || !el.classList.contains("cell")) return;
-                if (eraseMode) {
+                
+                // Если выбран ластик ИЛИ зажата правая кнопка мыши (forceErase)
+                if (eraseMode || forceErase) {
                     el.style.background = "";
                     el.style.color = "";
                     el.removeAttribute("data-color");
@@ -233,18 +266,93 @@
                 }
             }
 
-            matrixBox.onmousedown = (e) => { painting = true; paint(e.target); };
-            matrixBox.onmouseover = (e) => { if(painting) paint(e.target); };
-            window.onmouseup = () => painting = false;
+            // Отключаем нативное меню на правую кнопку мыши по таблице
             matrixBox.oncontextmenu = (e) => e.preventDefault();
 
+            // Рисование и стирание с помощью мыши (e.buttons: 1 = левая, 2 = правая)
+            matrixBox.onmousedown = (e) => {
+                if (e.button === 0) paint(e.target, false); // Левый клик (рисовать)
+                if (e.button === 2) paint(e.target, true);  // Правый клик (стирать)
+            };
+            matrixBox.onmouseover = (e) => {
+                if (e.buttons === 1) paint(e.target, false); // Зажата левая
+                if (e.buttons === 2) paint(e.target, true);  // Зажата правая
+            };
+
+            // Мобильное рисование
+            matrixBox.ontouchstart = (e) => {
+                e.preventDefault(); // Запрещаем скролл страницы по матрице
+                const touch = e.touches[0];
+                const el = document.elementFromPoint(touch.clientX, touch.clientY);
+                paint(el, false);
+            };
             matrixBox.ontouchmove = (e) => {
                 e.preventDefault();
                 const touch = e.touches[0];
                 const el = document.elementFromPoint(touch.clientX, touch.clientY);
-                paint(el);
+                paint(el, false);
             };
 
+            /* === Мобильная навигация (Мини-карта) === */
+            const minimap = document.getElementById('minimap');
+            const mapViewport = document.getElementById('minimap-viewport');
+            const scrollArea = document.querySelector('.matrix-scroll-area');
+
+            function syncMinimap() {
+                const mapWidth = minimap.clientWidth - 4; // минус бордеры
+                const scrollWidth = scrollArea.scrollWidth;
+                const clientWidth = scrollArea.clientWidth;
+
+                // Размер ползунка
+                const viewportWidth = Math.max(20, (clientWidth / scrollWidth) * mapWidth);
+                mapViewport.style.width = `${viewportWidth}px`;
+
+                // Позиция ползунка
+                const maxScrollLeft = scrollWidth - clientWidth;
+                if (maxScrollLeft > 0) {
+                    const scrollLeft = scrollArea.scrollLeft;
+                    const leftPos = (scrollLeft / maxScrollLeft) * (mapWidth - viewportWidth);
+                    mapViewport.style.left = `${leftPos + 2}px`;
+                }
+            }
+            
+            scrollArea.addEventListener('scroll', syncMinimap);
+            window.addEventListener('resize', syncMinimap);
+            setTimeout(syncMinimap, 100);
+
+            // Перетаскивание ползунка на телефоне
+            let mapDragging = false;
+            let startMapX = 0;
+            let startScroll = 0;
+
+            minimap.addEventListener('touchstart', (e) => {
+                mapDragging = true;
+                startMapX = e.touches[0].clientX;
+                startScroll = scrollArea.scrollLeft;
+                e.preventDefault();
+            }, {passive: false});
+
+            window.addEventListener('touchmove', (e) => {
+                if (!mapDragging) return;
+                const dx = e.touches[0].clientX - startMapX;
+                
+                const mapWidth = minimap.clientWidth - 4;
+                const scrollWidth = scrollArea.scrollWidth;
+                const clientWidth = scrollArea.clientWidth;
+                
+                const viewportWidth = (clientWidth / scrollWidth) * mapWidth;
+                const maxScrollLeft = scrollWidth - clientWidth;
+                const maxMapMove = mapWidth - viewportWidth;
+
+                // Соотношение пикселей карты к пикселям скролла
+                const ratio = maxScrollLeft / maxMapMove;
+                scrollArea.scrollLeft = startScroll + (dx * ratio);
+            }, {passive: false});
+
+            window.addEventListener('touchend', () => mapDragging = false);
+
+
+            /* === Кнопки управления === */
             document.getElementById("clearAll").onclick = () => {
                 if(confirm("Очистить таблицу?")) {
                     document.querySelectorAll(".cell").forEach(c => {
@@ -288,18 +396,31 @@
                 r.readAsText(e.target.files[0]);
             };
 
+            /* Идеальное сохранение PNG */
             document.getElementById("savePng").onclick = async () => {
                 let name = prompt("Имя файла PNG:", "poker-strategy") || "poker-strategy";
                 const btn = document.getElementById("savePng");
                 btn.textContent = "Создание...";
                 await new Promise(r => setTimeout(r, 100));
 
+                // Создаем обертку для идеального рендера теней и скруглений
+                const wrapper = document.createElement("div");
+                wrapper.style.padding = "40px";
+                wrapper.style.background = "var(--surface0)"; // Фон как у body
+                wrapper.style.display = "inline-flex";
+                wrapper.style.justifyContent = "center";
+                wrapper.style.alignItems = "center";
+                
+                // Временно переносим матрицу в эту обертку
+                const parent = matrixBox.parentNode;
+                parent.insertBefore(wrapper, matrixBox);
+                wrapper.appendChild(matrixBox);
+
                 try {
-                    const canvas = await html2canvas(matrixBox, {
-                        scale: 2,
+                    const canvas = await html2canvas(wrapper, {
+                        scale: 2, // Высокое качество
                         backgroundColor: "#1e1e2e",
-                        logging: false,
-                        borderRadius: 20 // Попытка сохранить скругления на картинке
+                        logging: false
                     });
                     const a = document.createElement("a");
                     a.download = name + ".png";
@@ -308,6 +429,9 @@
                 } catch (e) {
                     alert("Ошибка экспорта");
                 } finally {
+                    // Возвращаем все как было
+                    parent.insertBefore(matrixBox, wrapper);
+                    wrapper.remove();
                     btn.textContent = "Скачать PNG";
                 }
             };
