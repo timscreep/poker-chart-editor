@@ -9,68 +9,70 @@
 
         <style>
             :root {
-                --surface0: #313244;
-                --surface1: #45475a;
-                --surface2: #585b70;
+                --surface0: #1e1e2e; /* Base */
+                --surface1: #313244; /* Mantle */
+                --surface2: #45475a; /* Surface */
                 --text: #cdd6f4;
-                --base: #1e1e2e;
                 --mauve: #cba6f7;
+                --subtext: #a6adc8;
             }
 
             body {
-                font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-                background: var(--base);
+                font-family: 'Inter', system-ui, -apple-system, sans-serif;
+                background: var(--surface0);
                 color: var(--text);
                 margin: 0;
-                padding: 10px;
+                padding: 20px;
                 display: flex;
                 flex-direction: column;
                 align-items: center;
-                gap: 15px;
+                gap: 20px;
                 min-height: 100vh;
             }
 
-            /* Адаптивная панель инструментов */
+            /* Контейнер управления со скруглениями */
             .controls-container {
                 width: 100%;
                 max-width: 800px;
                 display: flex;
                 flex-direction: column;
-                gap: 12px;
-                background: var(--surface0);
-                padding: 15px;
-                border-radius: 12px;
-                box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+                gap: 20px;
+                background: var(--surface1);
+                padding: 24px;
+                border-radius: 24px; /* Мягкое скругление */
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+                border: 1px solid rgba(255, 255, 255, 0.05);
             }
 
             .palette, .actions {
                 display: flex;
-                gap: 8px;
+                gap: 10px;
                 flex-wrap: wrap;
                 justify-content: center;
                 align-items: center;
             }
 
+            /* Скругленные индикаторы цвета */
             .color-dot {
-                width: 32px;
-                height: 32px;
-                border-radius: 6px;
+                width: 36px;
+                height: 36px;
+                border-radius: 12px; /* Квадрат со скругленными углами */
                 cursor: pointer;
                 border: 2px solid transparent;
-                transition: all 0.1s ease;
+                transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             }
 
             .color-dot.selected {
                 border-color: #fff;
-                transform: scale(1.1);
-                box-shadow: 0 0 10px var(--mauve);
+                transform: translateY(-3px) scale(1.1);
+                box-shadow: 0 5px 15px rgba(0, 0, 0, 0.4);
             }
 
-            /* Матрица и скролл */
+            /* Стили матрицы */
             .matrix-scroll-area {
                 width: 100%;
                 overflow-x: auto;
-                padding-bottom: 10px;
+                padding: 10px 0 30px 0;
                 display: flex;
                 justify-content: center;
             }
@@ -78,49 +80,72 @@
             .matrix {
                 display: grid;
                 grid-template-columns: repeat(13, 1fr);
-                gap: 2px;
-                background: #11111b; /* Более темный фон для контраста границ */
-                padding: 4px;
-                border-radius: 4px;
-                /* Фиксированная ширина для стабильности экспорта */
-                width: 780px; 
+                gap: 4px; /* Небольшой зазор между ячейками */
+                background: var(--surface1);
+                padding: 12px;
+                border-radius: 20px; /* Скругление всей таблицы */
+                width: 780px;
                 min-width: 780px;
+                box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
             }
 
             .cell {
-                height: 54px; /* Фиксированная высота вместо aspect-ratio для html2canvas */
+                height: 54px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                background: var(--surface1);
+                background: var(--surface2);
                 cursor: pointer;
                 user-select: none;
                 font-size: 13px;
                 font-weight: 700;
-                color: var(--text);
+                border-radius: 8px; /* Скругление каждой ячейки */
+                transition: transform 0.1s ease, filter 0.1s ease;
             }
 
+            .cell:hover {
+                filter: brightness(1.2);
+                z-index: 10;
+            }
+
+            /* Кнопки */
             .btn {
-                padding: 8px 16px;
-                border-radius: 6px;
+                padding: 12px 24px;
+                border-radius: 14px; /* Современные скругленные кнопки */
                 background: var(--mauve);
-                color: #1e1e2e;
+                color: #11111b;
                 font-weight: 700;
                 font-size: 14px;
                 cursor: pointer;
                 border: none;
-                transition: opacity 0.2s;
+                transition: all 0.2s ease;
+                box-shadow: 0 4px 12px rgba(203, 166, 247, 0.2);
             }
 
-            .btn:active { opacity: 0.7; }
-            .btn.secondary { background: var(--surface2); color: var(--text); }
+            .btn:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 6px 20px rgba(203, 166, 247, 0.4);
+            }
+
+            .btn:active { transform: translateY(0); }
+
+            .btn.secondary {
+                background: var(--surface2);
+                color: var(--text);
+                box-shadow: none;
+            }
+            
+            .btn.secondary:hover {
+                background: #585b70;
+            }
 
             input[type="file"] { display: none; }
 
-            /* Мобильные правки */
+            /* Адаптация под мобилки */
             @media (max-width: 640px) {
-                .cell { height: 45px; font-size: 11px; }
-                .matrix { width: 600px; min-width: 600px; }
+                .cell { height: 46px; font-size: 11px; border-radius: 6px; }
+                .matrix { width: 600px; min-width: 600px; padding: 8px; border-radius: 16px; }
+                .controls-container { padding: 16px; border-radius: 20px; }
             }
         </style>
     </head>
@@ -129,15 +154,15 @@
         <div class="controls-container">
             <div class="palette">
                 <div id="paletteColors" class="flex gap-2 flex-wrap justify-center"></div>
-                <div class="color-dot flex items-center justify-center bg-slate-700 text-white" 
+                <div class="color-dot flex items-center justify-center bg-gray-600 text-white text-lg" 
                      data-color="erase" title="Ластик">✕</div>
             </div>
 
             <div class="actions">
                 <button id="clearAll" class="btn secondary">Очистить</button>
                 <button id="loadBtn" class="btn secondary">Загрузить JSON</button>
-                <button id="saveBtn" class="btn">JSON</button>
-                <button id="savePng" class="btn">Сохранить PNG</button>
+                <button id="saveBtn" class="btn">Сохранить JSON</button>
+                <button id="savePng" class="btn">Скачать PNG</button>
                 <input id="fileIn" type="file" accept="application/json" />
             </div>
         </div>
@@ -161,7 +186,6 @@
             let eraseMode = false;
             let painting = false;
 
-            // Рендер палитры
             PALETTE_COLORS.forEach(color => {
                 const d = document.createElement("div");
                 d.className = "color-dot";
@@ -182,7 +206,6 @@
             }
             selectColor(paletteBox.firstChild);
 
-            // Рендер матрицы
             ranks.forEach((r1, i) => {
                 ranks.forEach((r2, j) => {
                     const hand = i === j ? r1 + r2 : (i < j ? r1 + r2 + "s" : r2 + r1 + "o");
@@ -195,37 +218,32 @@
             });
 
             function paint(el) {
-                if (!el.classList.contains("cell")) return;
+                if (!el || !el.classList.contains("cell")) return;
                 if (eraseMode) {
                     el.style.background = "";
                     el.style.color = "";
                     el.removeAttribute("data-color");
                 } else {
                     el.style.background = currentColor;
-                    // Определяем яркость для цвета текста
                     const hex = currentColor.replace('#','');
                     const r = parseInt(hex.substr(0,2),16), g = parseInt(hex.substr(2,2),16), b = parseInt(hex.substr(4,2),16);
                     const brightness = (r*299 + g*587 + b*114) / 1000;
-                    el.style.color = brightness > 155 ? "#000" : "#fff";
+                    el.style.color = brightness > 160 ? "#11111b" : "#fff";
                     el.dataset.color = currentColor;
                 }
             }
 
-            // События мыши
             matrixBox.onmousedown = (e) => { painting = true; paint(e.target); };
             matrixBox.onmouseover = (e) => { if(painting) paint(e.target); };
             window.onmouseup = () => painting = false;
             matrixBox.oncontextmenu = (e) => e.preventDefault();
 
-            // Тач-события для мобилок
             matrixBox.ontouchmove = (e) => {
                 e.preventDefault();
                 const touch = e.touches[0];
                 const el = document.elementFromPoint(touch.clientX, touch.clientY);
-                if (el) paint(el);
+                paint(el);
             };
-
-            /* === ФУНКЦИИ КНОПОК === */
 
             document.getElementById("clearAll").onclick = () => {
                 if(confirm("Очистить таблицу?")) {
@@ -236,7 +254,7 @@
             };
 
             document.getElementById("saveBtn").onclick = () => {
-                let name = prompt("Имя файла JSON:", "chart") || "chart";
+                let name = prompt("Имя файла JSON:", "poker-chart") || "poker-chart";
                 const out = {};
                 document.querySelectorAll(".cell").forEach(c => {
                     if (c.dataset.color) out[c.dataset.hand] = c.dataset.color;
@@ -252,43 +270,45 @@
             document.getElementById("fileIn").onchange = (e) => {
                 const r = new FileReader();
                 r.onload = () => {
-                    const data = JSON.parse(r.result);
-                    document.querySelectorAll(".cell").forEach(c => {
-                        const col = data[c.dataset.hand];
-                        if (col) {
-                            c.style.background = col;
-                            c.dataset.color = col;
-                            c.style.color = "#000"; // упрощено
-                        }
-                    });
+                    try {
+                        const data = JSON.parse(r.result);
+                        document.querySelectorAll(".cell").forEach(c => {
+                            const col = data[c.dataset.hand];
+                            if (col) {
+                                c.style.background = col;
+                                c.dataset.color = col;
+                                const hex = col.replace('#','');
+                                const r = parseInt(hex.substr(0,2),16), g = parseInt(hex.substr(2,2),16), b = parseInt(hex.substr(4,2),16);
+                                const brightness = (r*299 + g*587 + b*114) / 1000;
+                                c.style.color = brightness > 160 ? "#11111b" : "#fff";
+                            }
+                        });
+                    } catch(e) { alert("Ошибка загрузки файла"); }
                 };
                 r.readAsText(e.target.files[0]);
             };
 
-            // Исправленный экспорт PNG
             document.getElementById("savePng").onclick = async () => {
                 let name = prompt("Имя файла PNG:", "poker-strategy") || "poker-strategy";
                 const btn = document.getElementById("savePng");
                 btn.textContent = "Создание...";
-
-                // Небольшая задержка, чтобы UI обновился
                 await new Promise(r => setTimeout(r, 100));
 
                 try {
                     const canvas = await html2canvas(matrixBox, {
-                        scale: 2, // Высокое качество
-                        backgroundColor: "#11111b",
+                        scale: 2,
+                        backgroundColor: "#1e1e2e",
                         logging: false,
-                        useCORS: true
+                        borderRadius: 20 // Попытка сохранить скругления на картинке
                     });
                     const a = document.createElement("a");
                     a.download = name + ".png";
                     a.href = canvas.toDataURL("image/png");
                     a.click();
                 } catch (e) {
-                    alert("Ошибка при создании PNG");
+                    alert("Ошибка экспорта");
                 } finally {
-                    btn.textContent = "Сохранить PNG";
+                    btn.textContent = "Скачать PNG";
                 }
             };
         </script>
