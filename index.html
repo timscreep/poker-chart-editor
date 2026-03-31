@@ -5,16 +5,15 @@
         <meta name="viewport" content="width=device-width,initial-scale=1" />
         <title>Hand Chart Editor Pro</title>
         <script src="https://cdn.tailwindcss.com"></script>
-        <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/dom-to-image/2.6.0/dom-to-image.min.js"></script>
 
         <style>
             :root {
-                --surface0: #1e1e2e; /* Base */
-                --surface1: #313244; /* Mantle */
-                --surface2: #45475a; /* Surface */
+                --surface0: #1e1e2e;
+                --surface1: #313244;
+                --surface2: #45475a;
                 --text: #cdd6f4;
                 --mauve: #cba6f7;
-                --subtext: #a6adc8;
             }
 
             body {
@@ -30,7 +29,6 @@
                 min-height: 100vh;
             }
 
-            /* Контейнер управления со скруглениями */
             .controls-container {
                 width: 100%;
                 max-width: 800px;
@@ -52,7 +50,6 @@
                 align-items: center;
             }
 
-            /* Скругленные индикаторы цвета */
             .color-dot {
                 width: 36px;
                 height: 36px;
@@ -68,14 +65,13 @@
                 box-shadow: 0 5px 15px rgba(0, 0, 0, 0.4);
             }
 
-            /* Стили матрицы */
             .matrix-scroll-area {
                 width: 100%;
                 overflow-x: auto;
                 padding: 10px 0 30px 0;
                 display: flex;
                 justify-content: center;
-                scrollbar-width: none; /* Прячем нативный скролл */
+                scrollbar-width: none;
             }
             .matrix-scroll-area::-webkit-scrollbar { display: none; }
 
@@ -110,7 +106,6 @@
                 z-index: 10;
             }
 
-            /* Кнопки */
             .btn {
                 padding: 12px 24px;
                 border-radius: 14px;
@@ -140,9 +135,9 @@
             .btn.secondary:hover { background: #585b70; }
             input[type="file"] { display: none; }
 
-            /* Мобильная навигация (Мини-карта) */
+            /* Мини-карта */
             .minimap {
-                display: none; /* По умолчанию скрыто на ПК */
+                display: none;
                 position: fixed;
                 bottom: 20px;
                 right: 20px;
@@ -167,12 +162,11 @@
                 cursor: grab;
             }
 
-            /* Адаптация под мобилки */
             @media (max-width: 640px) {
                 .cell { height: 46px; font-size: 11px; border-radius: 6px; }
                 .matrix { width: 600px; min-width: 600px; padding: 8px; border-radius: 16px; }
                 .controls-container { padding: 16px; border-radius: 20px; }
-                .minimap { display: block; } /* Показываем только на телефонах */
+                .minimap { display: block; }
             }
         </style>
     </head>
@@ -247,11 +241,9 @@
                 });
             });
 
-            // Обновленная функция отрисовки (принимает флаг forceErase)
             function paint(el, forceErase = false) {
                 if (!el || !el.classList.contains("cell")) return;
                 
-                // Если выбран ластик ИЛИ зажата правая кнопка мыши (forceErase)
                 if (eraseMode || forceErase) {
                     el.style.background = "";
                     el.style.color = "";
@@ -266,22 +258,19 @@
                 }
             }
 
-            // Отключаем нативное меню на правую кнопку мыши по таблице
             matrixBox.oncontextmenu = (e) => e.preventDefault();
 
-            // Рисование и стирание с помощью мыши (e.buttons: 1 = левая, 2 = правая)
             matrixBox.onmousedown = (e) => {
-                if (e.button === 0) paint(e.target, false); // Левый клик (рисовать)
-                if (e.button === 2) paint(e.target, true);  // Правый клик (стирать)
+                if (e.button === 0) paint(e.target, false);
+                if (e.button === 2) paint(e.target, true);
             };
             matrixBox.onmouseover = (e) => {
-                if (e.buttons === 1) paint(e.target, false); // Зажата левая
-                if (e.buttons === 2) paint(e.target, true);  // Зажата правая
+                if (e.buttons === 1) paint(e.target, false);
+                if (e.buttons === 2) paint(e.target, true);
             };
 
-            // Мобильное рисование
             matrixBox.ontouchstart = (e) => {
-                e.preventDefault(); // Запрещаем скролл страницы по матрице
+                e.preventDefault();
                 const touch = e.touches[0];
                 const el = document.elementFromPoint(touch.clientX, touch.clientY);
                 paint(el, false);
@@ -293,21 +282,18 @@
                 paint(el, false);
             };
 
-            /* === Мобильная навигация (Мини-карта) === */
             const minimap = document.getElementById('minimap');
             const mapViewport = document.getElementById('minimap-viewport');
             const scrollArea = document.querySelector('.matrix-scroll-area');
 
             function syncMinimap() {
-                const mapWidth = minimap.clientWidth - 4; // минус бордеры
+                const mapWidth = minimap.clientWidth - 4;
                 const scrollWidth = scrollArea.scrollWidth;
                 const clientWidth = scrollArea.clientWidth;
 
-                // Размер ползунка
                 const viewportWidth = Math.max(20, (clientWidth / scrollWidth) * mapWidth);
                 mapViewport.style.width = `${viewportWidth}px`;
 
-                // Позиция ползунка
                 const maxScrollLeft = scrollWidth - clientWidth;
                 if (maxScrollLeft > 0) {
                     const scrollLeft = scrollArea.scrollLeft;
@@ -320,7 +306,6 @@
             window.addEventListener('resize', syncMinimap);
             setTimeout(syncMinimap, 100);
 
-            // Перетаскивание ползунка на телефоне
             let mapDragging = false;
             let startMapX = 0;
             let startScroll = 0;
@@ -335,7 +320,6 @@
             window.addEventListener('touchmove', (e) => {
                 if (!mapDragging) return;
                 const dx = e.touches[0].clientX - startMapX;
-                
                 const mapWidth = minimap.clientWidth - 4;
                 const scrollWidth = scrollArea.scrollWidth;
                 const clientWidth = scrollArea.clientWidth;
@@ -344,15 +328,12 @@
                 const maxScrollLeft = scrollWidth - clientWidth;
                 const maxMapMove = mapWidth - viewportWidth;
 
-                // Соотношение пикселей карты к пикселям скролла
                 const ratio = maxScrollLeft / maxMapMove;
                 scrollArea.scrollLeft = startScroll + (dx * ratio);
             }, {passive: false});
 
             window.addEventListener('touchend', () => mapDragging = false);
 
-
-            /* === Кнопки управления === */
             document.getElementById("clearAll").onclick = () => {
                 if(confirm("Очистить таблицу?")) {
                     document.querySelectorAll(".cell").forEach(c => {
@@ -396,14 +377,16 @@
                 r.readAsText(e.target.files[0]);
             };
 
-            /* Идеальное сохранение PNG */
+            /* Идеальное сохранение PNG через dom-to-image */
             document.getElementById("savePng").onclick = async () => {
                 let name = prompt("Имя файла PNG:", "poker-strategy") || "poker-strategy";
                 const btn = document.getElementById("savePng");
+                const originalText = btn.textContent;
                 btn.textContent = "Создание...";
+                
+                // Даем браузеру отрендерить текст кнопки
                 await new Promise(r => setTimeout(r, 100));
 
-                // Создаем обертку для идеального рендера теней и скруглений
                 const wrapper = document.createElement("div");
                 wrapper.style.padding = "40px";
                 wrapper.style.background = "var(--surface0)"; // Фон как у body
@@ -411,28 +394,38 @@
                 wrapper.style.justifyContent = "center";
                 wrapper.style.alignItems = "center";
                 
-                // Временно переносим матрицу в эту обертку
                 const parent = matrixBox.parentNode;
                 parent.insertBefore(wrapper, matrixBox);
                 wrapper.appendChild(matrixBox);
 
                 try {
-                    const canvas = await html2canvas(wrapper, {
-                        scale: 2, // Высокое качество
-                        backgroundColor: "#1e1e2e",
-                        logging: false
+                    // Масштабирование x2 для высокого качества (Retina)
+                    const scale = 2;
+                    const style = {
+                        transform: 'scale(' + scale + ')',
+                        transformOrigin: 'top left',
+                        width: wrapper.offsetWidth + 'px',
+                        height: wrapper.offsetHeight + 'px'
+                    };
+
+                    const dataUrl = await domtoimage.toPng(wrapper, {
+                        width: wrapper.offsetWidth * scale,
+                        height: wrapper.offsetHeight * scale,
+                        style: style,
+                        bgcolor: '#1e1e2e'
                     });
+
                     const a = document.createElement("a");
                     a.download = name + ".png";
-                    a.href = canvas.toDataURL("image/png");
+                    a.href = dataUrl;
                     a.click();
                 } catch (e) {
-                    alert("Ошибка экспорта");
+                    console.error("Ошибка экспорта:", e);
+                    alert("Ошибка экспорта PNG");
                 } finally {
-                    // Возвращаем все как было
                     parent.insertBefore(matrixBox, wrapper);
                     wrapper.remove();
-                    btn.textContent = "Скачать PNG";
+                    btn.textContent = originalText;
                 }
             };
         </script>
