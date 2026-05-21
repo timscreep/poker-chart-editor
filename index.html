@@ -50,19 +50,31 @@
                 align-items: center;
             }
 
-            .color-dot {
-                width: 36px;
-                height: 36px;
+            /* Заменили .color-dot на более удобные кнопки-действия */
+            .action-btn {
+                padding: 10px 20px;
                 border-radius: 12px;
                 cursor: pointer;
                 border: 2px solid transparent;
                 transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+                font-weight: 700;
+                font-size: 15px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: #11111b;
+                user-select: none;
             }
 
-            .color-dot.selected {
+            .action-btn.selected {
                 border-color: #fff;
-                transform: translateY(-3px) scale(1.1);
+                transform: translateY(-3px) scale(1.05);
                 box-shadow: 0 5px 15px rgba(0, 0, 0, 0.4);
+            }
+
+            .action-btn.eraser {
+                background: var(--surface2);
+                color: var(--text);
             }
 
             .matrix-scroll-area {
@@ -135,7 +147,6 @@
             .btn.secondary:hover { background: #585b70; }
             input[type="file"] { display: none; }
 
-            /* Мини-карта */
             .minimap {
                 display: none;
                 position: fixed;
@@ -174,9 +185,9 @@
     <body>
         <div class="controls-container">
             <div class="palette">
-                <div id="paletteColors" class="flex gap-2 flex-wrap justify-center"></div>
-                <div class="color-dot flex items-center justify-center bg-gray-600 text-white text-lg" 
-                     data-color="erase" title="Ластик">✕</div>
+                <!-- Контейнер для кнопок действий -->
+                <div id="actionButtons" class="flex gap-3 flex-wrap justify-center"></div>
+                <div class="action-btn eraser" data-action="Erase" title="Ластик">Ластик ✕</div>
             </div>
 
             <div class="actions">
@@ -197,39 +208,50 @@
         </div>
 
         <script>
-            const PALETTE_COLORS = [
-                "#a6e3a1", "#94e2d5", "#89dceb", "#74c7ec", "#89b4fa",
-                "#b4befe", "#cba6f7", "#f5c2e7", "#eba0ac", "#f38ba8",
-                "#fab387", "#f9e2af", "#ffffff"
+            // Определяем игровые действия и цвета в стиле Catppuccin Macchiato
+            const POKER_ACTIONS = [
+                { id: "Raise", color: "#f38ba8" }, // Красный
+                { id: "Call", color: "#a6e3a1" },  // Зеленый
+                { id: "Fold", color: "#89b4fa" }   // Синий
             ];
 
             const ranks = ["A", "K", "Q", "J", "T", "9", "8", "7", "6", "5", "4", "3", "2"];
             const matrixBox = document.getElementById("matrix");
-            const paletteBox = document.getElementById("paletteColors");
+            const actionBox = document.getElementById("actionButtons");
             
-            let currentColor = PALETTE_COLORS[0];
+            let currentAction = POKER_ACTIONS[0];
             let eraseMode = false;
 
-            PALETTE_COLORS.forEach(color => {
-                const d = document.createElement("div");
-                d.className = "color-dot";
-                d.dataset.color = color;
-                d.style.background = color;
-                d.onclick = () => selectColor(d);
-                paletteBox.appendChild(d);
+            // Генерация кнопок действий
+            POKER_ACTIONS.forEach(action => {
+                const btn = document.createElement("div");
+                btn.className = "action-btn";
+                btn.dataset.action = action.id;
+                btn.style.background = action.color;
+                btn.textContent = action.id;
+                btn.onclick = () => selectAction(btn, action);
+                actionBox.appendChild(btn);
             });
 
-            const eraser = document.querySelector('[data-color="erase"]');
-            eraser.onclick = () => selectColor(eraser);
+            const eraserBtn = document.querySelector('.eraser');
+            eraserBtn.onclick = () => selectAction(eraserBtn, null);
 
-            function selectColor(dot) {
-                document.querySelectorAll(".color-dot").forEach(d => d.classList.remove("selected"));
-                dot.classList.add("selected");
-                eraseMode = dot.dataset.color === "erase";
-                currentColor = eraseMode ? null : dot.dataset.color;
+            function selectAction(btn, actionObj) {
+                document.querySelectorAll(".action-btn").forEach(d => d.classList.remove("selected"));
+                btn.classList.add("selected");
+                
+                if (actionObj === null) {
+                    eraseMode = true;
+                    currentAction = null;
+                } else {
+                    eraseMode = false;
+                    currentAction = actionObj;
+                }
             }
-            selectColor(paletteBox.firstChild);
+            // Выбираем первое действие по умолчанию (Raise)
+            selectAction(actionBox.firstChild, POKER_ACTIONS[0]);
 
+            // Генерация матрицы рук
             ranks.forEach((r1, i) => {
                 ranks.forEach((r2, j) => {
                     const hand = i === j ? r1 + r2 : (i < j ? r1 + r2 + "s" : r2 + r1 + "o");
@@ -241,25 +263,30 @@
                 });
             });
 
+            // Функция покраски с привязкой действия
             function paint(el, forceErase = false) {
                 if (!el || !el.classList.contains("cell")) return;
                 
                 if (eraseMode || forceErase) {
                     el.style.background = "";
                     el.style.color = "";
+                    el.removeAttribute("data-action");
                     el.removeAttribute("data-color");
                 } else {
-                    el.style.background = currentColor;
-                    const hex = currentColor.replace('#','');
+                    el.style.background = currentAction.color;
+                    el.dataset.action = currentAction.id;
+                    el.dataset.color = currentAction.color;
+                    
+                    // Вычисляем яркость для контрастного текста
+                    const hex = currentAction.color.replace('#','');
                     const r = parseInt(hex.substr(0,2),16), g = parseInt(hex.substr(2,2),16), b = parseInt(hex.substr(4,2),16);
                     const brightness = (r*299 + g*587 + b*114) / 1000;
                     el.style.color = brightness > 160 ? "#11111b" : "#fff";
-                    el.dataset.color = currentColor;
                 }
             }
 
+            // Обработчики мыши и тапов (остались прежними)
             matrixBox.oncontextmenu = (e) => e.preventDefault();
-
             matrixBox.onmousedown = (e) => {
                 if (e.button === 0) paint(e.target, false);
                 if (e.button === 2) paint(e.target, true);
@@ -282,6 +309,7 @@
                 paint(el, false);
             };
 
+            // --- Логика мини-карты (осталась без изменений) ---
             const minimap = document.getElementById('minimap');
             const mapViewport = document.getElementById('minimap-viewport');
             const scrollArea = document.querySelector('.matrix-scroll-area');
@@ -334,27 +362,31 @@
 
             window.addEventListener('touchend', () => mapDragging = false);
 
+
+            // --- Сохранение, Загрузка, Очистка ---
             document.getElementById("clearAll").onclick = () => {
                 if(confirm("Очистить таблицу?")) {
-                    document.querySelectorAll(".cell").forEach(c => {
-                        c.style.background = ""; c.style.color = ""; c.removeAttribute("data-color");
-                    });
+                    document.querySelectorAll(".cell").forEach(c => paint(c, true));
                 }
             };
 
+            // Экспорт JSON: теперь сохраняем действие (Raise/Call/Fold)
             document.getElementById("saveBtn").onclick = () => {
-                let name = prompt("Имя файла JSON:", "poker-chart") || "poker-chart";
+                let name = prompt("Имя файла JSON:", "poker-actions") || "poker-actions";
                 const out = {};
                 document.querySelectorAll(".cell").forEach(c => {
-                    if (c.dataset.color) out[c.dataset.hand] = c.dataset.color;
+                    if (c.dataset.action) {
+                        out[c.dataset.hand] = c.dataset.action;
+                    }
                 });
-                const blob = new Blob([JSON.stringify(out)], {type: "application/json"});
+                const blob = new Blob([JSON.stringify(out, null, 2)], {type: "application/json"});
                 const a = document.createElement("a");
                 a.href = URL.createObjectURL(blob);
                 a.download = name + ".json";
                 a.click();
             };
 
+            // Импорт JSON
             document.getElementById("loadBtn").onclick = () => document.getElementById("fileIn").click();
             document.getElementById("fileIn").onchange = (e) => {
                 const r = new FileReader();
@@ -362,34 +394,44 @@
                     try {
                         const data = JSON.parse(r.result);
                         document.querySelectorAll(".cell").forEach(c => {
-                            const col = data[c.dataset.hand];
-                            if (col) {
-                                c.style.background = col;
-                                c.dataset.color = col;
-                                const hex = col.replace('#','');
-                                const r = parseInt(hex.substr(0,2),16), g = parseInt(hex.substr(2,2),16), b = parseInt(hex.substr(4,2),16);
-                                const brightness = (r*299 + g*587 + b*114) / 1000;
-                                c.style.color = brightness > 160 ? "#11111b" : "#fff";
+                            const val = data[c.dataset.hand];
+                            if (val) {
+                                // Ищем, это новое действие (Raise) или старый цвет (#a6e3a1)?
+                                const actionMatch = POKER_ACTIONS.find(a => a.id === val || a.color === val);
+                                
+                                if (actionMatch) {
+                                    c.style.background = actionMatch.color;
+                                    c.dataset.action = actionMatch.id;
+                                    c.dataset.color = actionMatch.color;
+                                    
+                                    const hex = actionMatch.color.replace('#','');
+                                    const rCode = parseInt(hex.substr(0,2),16), gCode = parseInt(hex.substr(2,2),16), bCode = parseInt(hex.substr(4,2),16);
+                                    const brightness = (rCode*299 + gCode*587 + bCode*114) / 1000;
+                                    c.style.color = brightness > 160 ? "#11111b" : "#fff";
+                                }
+                            } else {
+                                // Если в JSON нет данных для этой руки — стираем
+                                paint(c, true);
                             }
                         });
                     } catch(e) { alert("Ошибка загрузки файла"); }
+                    e.target.value = ''; // Сброс инпута
                 };
-                r.readAsText(e.target.files[0]);
+                if(e.target.files.length) r.readAsText(e.target.files[0]);
             };
 
-            /* Идеальное сохранение PNG через dom-to-image */
+            // Экспорт PNG (без изменений)
             document.getElementById("savePng").onclick = async () => {
                 let name = prompt("Имя файла PNG:", "poker-strategy") || "poker-strategy";
                 const btn = document.getElementById("savePng");
                 const originalText = btn.textContent;
                 btn.textContent = "Создание...";
                 
-                // Даем браузеру отрендерить текст кнопки
                 await new Promise(r => setTimeout(r, 100));
 
                 const wrapper = document.createElement("div");
                 wrapper.style.padding = "40px";
-                wrapper.style.background = "var(--surface0)"; // Фон как у body
+                wrapper.style.background = "var(--surface0)";
                 wrapper.style.display = "inline-flex";
                 wrapper.style.justifyContent = "center";
                 wrapper.style.alignItems = "center";
@@ -399,7 +441,6 @@
                 wrapper.appendChild(matrixBox);
 
                 try {
-                    // Масштабирование x2 для высокого качества (Retina)
                     const scale = 2;
                     const style = {
                         transform: 'scale(' + scale + ')',
